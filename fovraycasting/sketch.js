@@ -60,8 +60,10 @@ function mouseReleased() {
   createWall(startPos.x, startPos.y, mouseX, mouseY);
 }
 
-function vectorDist(v1, v2) { // USE THIS INSTEAD OF DUMBASS BUILT IN DIST FUNCTION THAT IS THROWING AN ERROR
-  return sqrt()
+function distance(v1, v2) {
+  let diffY = v1.y - v2.y;
+  let diffX = v1.x - v2.x;
+  return sqrt(pow(diffY, 2) + pow(diffX, 2));
 }
 
 function keyPressed() {
@@ -79,6 +81,14 @@ function keyPressed() {
   
   if (keyCode === 83) {
     player.position.y += 5;
+  }
+
+  if (keyCode === RIGHT_ARROW) {
+    player.direction += 15;
+  }
+
+  if (keyCode === LEFT_ARROW) {
+    player.direction -= 15;
   }
 }
 
@@ -101,17 +111,16 @@ class Player {
     this.rays = [];
     for (let i = 0; i < this.fov; i++) {
       let rayDirection = (this.direction-this.fov/2) + i;
-      let closestCollision = createVector(MAX_RAY_LENGTH, MAX_RAY_LENGTH);
+      let closestCollision = createVector(10000, 10000);
       walls.forEach(wall => {
         let coll = collideLineLineVector(createVector(this.position.x, this.position.y), createVector(this.position.x+cos(rayDirection)*MAX_RAY_LENGTH, this.position.y+sin(rayDirection)*MAX_RAY_LENGTH), wall.a, wall.b, true);
-        
+        circle(coll.x, coll.y, 10);
         if (coll.x !== false) {
-          if (createVector(coll.x, coll.y).dist(player.position) < player.position.dist(closestCollision)) {
+          if (distance(createVector(coll.x, coll.y), player.position) < distance(player.position, closestCollision)) {
             closestCollision = coll;
           }
         }
       });
-      
       this.rays.push(new Ray(rayDirection, closestCollision));
     }
   }
@@ -124,14 +133,11 @@ class Ray {
   }
   
   display() {
-    if (createVector(MAX_RAY_LENGTH, MAX_RAY_LENGTH).dist(this.blockedPosition) < 1) {
-      line(player.position.x, player.position.y, this.blockedPosition.x, this.blockedPosition.y);
+    if (distance(createVector(10000, 10000), this.blockedPosition) === 0) {
+      line(player.position.x, player.position.y, player.position.x + cos(this.direction) * MAX_RAY_LENGTH, player.position.y + sin(this.direction) * MAX_RAY_LENGTH);
     }
     else {
-      push();
-      translate(player.position.x, player.position.y);
-      line(0, 0, cos(this.direction) * MAX_RAY_LENGTH, sin(this.direction) * MAX_RAY_LENGTH);
-      pop();
+      line(player.position.x, player.position.y, this.blockedPosition.x, this.blockedPosition.y);
     }
   }
 }
