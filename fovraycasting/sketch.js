@@ -1,21 +1,20 @@
-// Ben
-// 3/21/23
-// 
-// Extra for Experts:
-// used collide js
-
-
 let walls; // array of walls
 let startPos; // temporary variable used for creating walls
 let collisions; // array of collision coordinates
 let player;
 let MAX_RAY_LENGTH;
+let MINIMAP_SCALE;
+let FOV;
+let SCREEN_UNIT_WIDTH;
 function setup() {
   createCanvas(windowWidth, windowHeight);
   angleMode(DEGREES);
   walls = [];
   collisions = [];
   MAX_RAY_LENGTH = sqrt(pow(width, 2) + pow(height, 2));
+  MINIMAP_SCALE = 10; // divide everything displayed by minimap by this, 1 would mean minimap takes the whole screen
+  FOV = 60;
+  SCREEN_UNIT_WIDTH = width/FOV;
   console.log(MAX_RAY_LENGTH);
   player = new Player(createVector(width/2, height/2), 60, 0);
   createWall(10, 10, 100, 100); // example wall
@@ -23,7 +22,10 @@ function setup() {
 
 function draw() {
   background(220);
-  display();
+  detectKeys();
+  render3D();
+  rect(0, 0, width/MINIMAP_SCALE, height/MINIMAP_SCALE);
+  displayMinimap();
   updateCollision();
   player.update();
 }
@@ -33,10 +35,10 @@ function createWall(x1, y1, x2, y2) {
               b:createVector(x2, y2)}); // create a new line
 }
 
-function display() {
-  //display the walls
+function displayMinimap() {
+  //display the walls in the minimap
   walls.forEach(element => {
-    line(element.a.x, element.a.y, element.b.x, element.b.y);
+    line(element.a.x/MINIMAP_SCALE, element.a.y/MINIMAP_SCALE, element.b.x/MINIMAP_SCALE, element.b.y/MINIMAP_SCALE);
   });
 
   //display a circle every time the lines collide
@@ -66,30 +68,36 @@ function distance(v1, v2) {
   return sqrt(pow(diffY, 2) + pow(diffX, 2));
 }
 
-function keyPressed() {
-  if (keyCode === 65) {
-    player.position.x -= 5;
+function detectKeys() {
+  //w=87, a=65, s=83, d=68
+  if (keyIsDown(RIGHT_ARROW)) {
+    player.direction += 2;
   }
-  
-  if (keyCode === 68) {
-    player.position.x += 5;
+  if (keyIsDown(LEFT_ARROW)) {
+    player.direction -= 2;
   }
-  
-  if (keyCode === 87) {
+  if (keyIsDown(87)) {
     player.position.y -= 5;
   }
-  
-  if (keyCode === 83) {
+  if (keyIsDown(65)) {
+    player.position.x -= 5;
+  }
+  if (keyIsDown(83)) {
     player.position.y += 5;
   }
-
-  if (keyCode === RIGHT_ARROW) {
-    player.direction += 15;
+  if (keyIsDown(68)) {
+    player.position.x += 5;
   }
+}
 
-  if (keyCode === LEFT_ARROW) {
-    player.direction -= 15;
+function render3D() {
+  //SCREEN_UNIT_WIDTH
+  rectMode(CENTER);
+  for (let i = 0; i < player.rays.length-2; i++) {
+    rect(i * SCREEN_UNIT_WIDTH, height/2, SCREEN_UNIT_WIDTH, (MAX_RAY_LENGTH - player.rays[i].size)/2);
+    rect(i * SCREEN_UNIT_WIDTH, 0, )
   }
+  rectMode(CORNER);
 }
 
 class Player {
@@ -101,7 +109,7 @@ class Player {
   }
   
   display() {
-    circle(this.position.x, this.position.y, 15);
+    circle(this.position.x/MINIMAP_SCALE, this.position.y/MINIMAP_SCALE, 15);
     this.rays.forEach(element => {
       element.display();
     });
@@ -114,7 +122,7 @@ class Player {
       let closestCollision = createVector(10000, 10000);
       walls.forEach(wall => {
         let coll = collideLineLineVector(createVector(this.position.x, this.position.y), createVector(this.position.x+cos(rayDirection)*MAX_RAY_LENGTH, this.position.y+sin(rayDirection)*MAX_RAY_LENGTH), wall.a, wall.b, true);
-        circle(coll.x, coll.y, 10);
+        //circle(coll.x, coll.y, 10);
         if (coll.x !== false) {
           if (distance(createVector(coll.x, coll.y), player.position) < distance(player.position, closestCollision)) {
             closestCollision = coll;
@@ -130,14 +138,15 @@ class Ray {
   constructor(direction, blockedPosition) {
     this.direction = direction;
     this.blockedPosition = blockedPosition;
+    this.size = distance(player.position, blockedPosition);
   }
   
   display() {
     if (distance(createVector(10000, 10000), this.blockedPosition) === 0) {
-      line(player.position.x, player.position.y, player.position.x + cos(this.direction) * MAX_RAY_LENGTH, player.position.y + sin(this.direction) * MAX_RAY_LENGTH);
+      line(player.position.x/MINIMAP_SCALE, player.position.y/MINIMAP_SCALE, (player.position.x + cos(this.direction) * MAX_RAY_LENGTH)/MINIMAP_SCALE, (player.position.y + sin(this.direction) * MAX_RAY_LENGTH)/MINIMAP_SCALE);
     }
     else {
-      line(player.position.x, player.position.y, this.blockedPosition.x, this.blockedPosition.y);
+      line(player.position.x/MINIMAP_SCALE, player.position.y/MINIMAP_SCALE, this.blockedPosition.x/MINIMAP_SCALE, this.blockedPosition.y/MINIMAP_SCALE);
     }
   }
 }
