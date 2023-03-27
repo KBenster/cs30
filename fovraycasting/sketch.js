@@ -6,6 +6,7 @@ let MAX_RAY_LENGTH;
 let MINIMAP_SCALE;
 let FOV;
 let SCREEN_UNIT_WIDTH;
+let SUBDIVISIONS; // how many rays should be cast
 function setup() {
   createCanvas(windowWidth, windowHeight);
   angleMode(DEGREES);
@@ -13,20 +14,19 @@ function setup() {
   collisions = [];
   MAX_RAY_LENGTH = sqrt(pow(width, 2) + pow(height, 2));
   MINIMAP_SCALE = 10; // divide everything displayed by minimap by this, 1 would mean minimap takes the whole screen
-  FOV = 60;
-  SCREEN_UNIT_WIDTH = width/FOV;
-  console.log(MAX_RAY_LENGTH);
-  player = new Player(createVector(width/2, height/2), 60, 0);
-  createWall(10, 10, 100, 100); // example wall
+  FOV = 50;
+  SCREEN_UNIT_WIDTH = width/SUBDIVISIONS;
+  SUBDIVISIONS = 500;
+  player = new Player(createVector(width/2, height/2), FOV, 0);
 }
 
 function draw() {
-  background(220);
+  background(255);
   detectKeys();
+  drawBackground();
   render3D();
   rect(0, 0, width/MINIMAP_SCALE, height/MINIMAP_SCALE);
   displayMinimap();
-  updateCollision();
   player.update();
 }
 
@@ -47,11 +47,6 @@ function displayMinimap() {
   });
   
   player.display();
-}
-
-function updateCollision() {
-  collisions = [];
-  
 }
 
 function mousePressed() {
@@ -94,10 +89,23 @@ function render3D() {
   //SCREEN_UNIT_WIDTH
   rectMode(CENTER);
   for (let i = 0; i < player.rays.length-2; i++) {
-    rect(i * SCREEN_UNIT_WIDTH, height/2, SCREEN_UNIT_WIDTH, (MAX_RAY_LENGTH - player.rays[i].size)/2);
-    rect(i * SCREEN_UNIT_WIDTH, 0, )
+    push();
+    noStroke();
+    fill(200-(player.rays[i].size / pow(MAX_RAY_LENGTH,1/2)));
+    output(200-(player.rays[i].size / pow(MAX_RAY_LENGTH,1/2)));
+    rect(i * width/SUBDIVISIONS, height/2, width/SUBDIVISIONS + 1, height*(player.rays[i].size)/MAX_RAY_LENGTH);
+    pop();
   }
   rectMode(CORNER);
+}
+
+function drawBackground() {
+  push();
+  fill(100, 255, 100);
+  rect(0, height/2, width, height/2);
+  fill(100, 100, 255);
+  rect(0, 0, width, height/2);
+  pop();
 }
 
 class Player {
@@ -117,8 +125,8 @@ class Player {
   
   update() {
     this.rays = [];
-    for (let i = 0; i < this.fov; i++) {
-      let rayDirection = (this.direction-this.fov/2) + i;
+    for (let i = 0; i < SUBDIVISIONS; i++) {
+      let rayDirection = (this.direction-this.fov/2) + (i * (this.fov/SUBDIVISIONS));
       let closestCollision = createVector(10000, 10000);
       walls.forEach(wall => {
         let coll = collideLineLineVector(createVector(this.position.x, this.position.y), createVector(this.position.x+cos(rayDirection)*MAX_RAY_LENGTH, this.position.y+sin(rayDirection)*MAX_RAY_LENGTH), wall.a, wall.b, true);
@@ -148,5 +156,11 @@ class Ray {
     else {
       line(player.position.x/MINIMAP_SCALE, player.position.y/MINIMAP_SCALE, this.blockedPosition.x/MINIMAP_SCALE, this.blockedPosition.y/MINIMAP_SCALE);
     }
+  }
+}
+
+function output(x1) {
+  if (frameCount % 100 === 0) {
+    console.log(x1);
   }
 }
