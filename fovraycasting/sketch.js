@@ -7,17 +7,19 @@ let MINIMAP_SCALE;
 let FOV;
 let SCREEN_UNIT_WIDTH;
 let SUBDIVISIONS; // how many rays should be cast
+let MAP_DIMENSIONS;
 function setup() {
   createCanvas(windowWidth, windowHeight);
   angleMode(DEGREES);
   walls = [];
   collisions = [];
-  MAX_RAY_LENGTH = sqrt(pow(width, 2) + pow(height, 2));
+  MAP_DIMENSIONS = createVector(5000, 5000);
+  MAX_RAY_LENGTH = sqrt(pow(MAP_DIMENSIONS.x, 2) + pow(MAP_DIMENSIONS.y, 2));
   MINIMAP_SCALE = 10; // divide everything displayed by minimap by this, 1 would mean minimap takes the whole screen
   FOV = 50;
   SCREEN_UNIT_WIDTH = width/SUBDIVISIONS;
   SUBDIVISIONS = 500;
-  player = new Player(createVector(width/2, height/2), FOV, 0);
+  player = new Player(createVector(MAP_DIMENSIONS.x/2, MAP_DIMENSIONS.y/2), FOV, 0);
 }
 
 function draw() {
@@ -25,7 +27,7 @@ function draw() {
   detectKeys();
   drawBackground();
   render3D();
-  rect(0, 0, width/MINIMAP_SCALE, height/MINIMAP_SCALE);
+  rect(0, 0, MAP_DIMENSIONS.x/MINIMAP_SCALE, MAP_DIMENSIONS.y/MINIMAP_SCALE);
   displayMinimap();
   player.update();
 }
@@ -92,8 +94,9 @@ function render3D() {
     push();
     noStroke();
     fill(200-(player.rays[i].size / pow(MAX_RAY_LENGTH,1/2)));
-    output(200-(player.rays[i].size / pow(MAX_RAY_LENGTH,1/2)));
-    rect(i * width/SUBDIVISIONS, height/2, width/SUBDIVISIONS + 1, height*(player.rays[i].size)/MAX_RAY_LENGTH);
+    let h = map(MAX_RAY_LENGTH-player.rays[i].size, 0, MAX_RAY_LENGTH, 0, height, true);
+    output(h);
+    rect(i * width/SUBDIVISIONS, height/2, width/SUBDIVISIONS + 1, h/2);
     pop();
   }
   rectMode(CORNER);
