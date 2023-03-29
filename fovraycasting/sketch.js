@@ -2,15 +2,30 @@ let walls; // array of walls
 let startPos; // temporary variable used for creating walls
 let collisions; // array of collision coordinates
 let player;
+let maze; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 let MAX_RAY_LENGTH;
 let MINIMAP_SCALE;
 let FOV;
 let SCREEN_UNIT_WIDTH;
 let SUBDIVISIONS; // how many rays should be cast
 let MAP_DIMENSIONS;
+
+//WEBSOCKET VARIABLES
+let me;
+let guests;
+
+function preload() {
+  partyConnect("wss://demoserver.p5party.org", "biabovdabdvo");
+}
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   angleMode(DEGREES);
+
+  console.log("me", JSON.stringify(me));
+  console.log("guests", JSON.stringify(guests));
+  console.log("am i host?", partyIsHost());
+
   walls = [];
   collisions = [];
   MAP_DIMENSIONS = createVector(5000, 5000);
@@ -20,6 +35,9 @@ function setup() {
   SCREEN_UNIT_WIDTH = width/SUBDIVISIONS;
   SUBDIVISIONS = 500;
   player = new Player(createVector(MAP_DIMENSIONS.x/2, MAP_DIMENSIONS.y/2), FOV, 0);
+
+  me = partyLoadMyShared(player.position);
+  guests = partyLoadGuestShareds();
 }
 
 function draw() {
@@ -65,7 +83,7 @@ function distance(v1, v2) {
   return sqrt(pow(diffY, 2) + pow(diffX, 2));
 }
 
-function detectKeys() {
+function detectKeys() { // (cos, sin)
   //w=87, a=65, s=83, d=68
   if (keyIsDown(RIGHT_ARROW)) {
     player.direction += 2;
@@ -74,16 +92,20 @@ function detectKeys() {
     player.direction -= 2;
   }
   if (keyIsDown(87)) {
-    player.position.y -= 5;
+    player.position.y += sin(player.direction) * 5;
+    player.position.x += cos(player.direction) * 5;
   }
   if (keyIsDown(65)) {
-    player.position.x -= 5;
+    player.position.y -= cos(player.direction) * 5;
+    player.position.x += sin(player.direction) * 5;
   }
   if (keyIsDown(83)) {
-    player.position.y += 5;
+    player.position.y -= sin(player.direction) * 5;
+    player.position.x -= cos(player.direction) * 5;
   }
   if (keyIsDown(68)) {
-    player.position.x += 5;
+    player.position.y += cos(player.direction) * 5;
+    player.position.x -= sin(player.direction) * 5;
   }
 }
 
@@ -95,7 +117,6 @@ function render3D() {
     noStroke();
     fill(200-(player.rays[i].size / pow(MAX_RAY_LENGTH,1/2)));
     let h = map(MAX_RAY_LENGTH-player.rays[i].size, 0, MAX_RAY_LENGTH, 0, height, true);
-    output(h);
     rect(i * width/SUBDIVISIONS, height/2, width/SUBDIVISIONS + 1, h/2);
     pop();
   }

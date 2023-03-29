@@ -8,13 +8,14 @@
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  background(220);
+  drawLines(50, 50);
 }
 // they have cleaning chemicals that they use to clean like the deep fryers and stuff
 // dumbass maintenance guy didnt wash out the cleaning chemicals when refilling the deep fryers with oil
 // for the past 2 weeks everyone has been eating carcinogenic toxic fries and chicken
 function draw() {
-  background(220);
-  drawLines(500, 500);
+  
 }
 
 function drawLines(rows, cols) {
