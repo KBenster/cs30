@@ -1,8 +1,6 @@
 let walls; // array of walls
-let startPos; // temporary variable used for creating walls
 let collisions; // array of collision coordinates
 let player;
-let maze; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 let MAX_RAY_LENGTH;
 let MINIMAP_SCALE;
 let FOV;
@@ -16,6 +14,8 @@ let guests;
 
 function preload() {
   partyConnect("wss://demoserver.p5party.org", "biabovdabdvo");
+  me = partyLoadMyShared(player.position);
+  guests = partyLoadGuestShareds();
 }
 
 function setup() {
@@ -35,9 +35,6 @@ function setup() {
   SCREEN_UNIT_WIDTH = width/SUBDIVISIONS;
   SUBDIVISIONS = 500;
   player = new Player(createVector(MAP_DIMENSIONS.x/2, MAP_DIMENSIONS.y/2), FOV, 0);
-
-  me = partyLoadMyShared(player.position);
-  guests = partyLoadGuestShareds();
 }
 
 function draw() {
@@ -67,14 +64,6 @@ function displayMinimap() {
   });
   
   player.display();
-}
-
-function mousePressed() {
-  startPos = createVector(mouseX, mouseY);
-}
-
-function mouseReleased() {
-  createWall(startPos.x, startPos.y, mouseX, mouseY);
 }
 
 function distance(v1, v2) {
@@ -186,5 +175,23 @@ class Ray {
 function output(x1) {
   if (frameCount % 100 === 0) {
     console.log(x1);
+  }
+}
+
+class Minigame {
+  constructor() {
+    this.grid = [[0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0]];
+    this.turn = 1; // 1 is x, 2 is o
+  }
+
+  update(x, y) {
+    this.grid[y][x] = this.turn % 2 === 0;
+    this.turn++;
+  }
+
+  display() {
+
   }
 }
