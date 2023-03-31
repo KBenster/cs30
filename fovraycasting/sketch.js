@@ -82,7 +82,9 @@ function displayMinimap() {
 //  /            x      | y
 // /                    \/
 function calculateNormal(x1, y1, x2, y2) {
-
+  let diffX = x1-x2;
+  let diffY = y1-y2;
+  
 }
 
 function distance(v1, v2) {
