@@ -35,6 +35,15 @@ function setup() {
   SCREEN_UNIT_WIDTH = width/SUBDIVISIONS;
   SUBDIVISIONS = 500;
   player = new Player(createVector(MAP_DIMENSIONS.x/2, MAP_DIMENSIONS.y/2), FOV, 0);
+
+  createWall(0, 0, width/2, height/2);
+  createWall(50, 500, 0, 100);
+  createWall(400, 400, 2050, 200);
+
+  createWall(0, MAP_DIMENSIONS.y, 0, 0);
+  createWall(MAP_DIMENSIONS.x, MAP_DIMENSIONS.y, MAP_DIMENSIONS.x, 0);
+  createWall(0, 0, MAP_DIMENSIONS.x, 0);
+  createWall(0, MAP_DIMENSIONS.y, MAP_DIMENSIONS.x, MAP_DIMENSIONS.y);
 }
 
 function draw() {
@@ -42,7 +51,6 @@ function draw() {
   detectKeys();
   drawBackground();
   render3D();
-  rect(0, 0, MAP_DIMENSIONS.x/MINIMAP_SCALE, MAP_DIMENSIONS.y/MINIMAP_SCALE);
   displayMinimap();
   player.update();
 }
@@ -53,6 +61,7 @@ function createWall(x1, y1, x2, y2) {
 }
 
 function displayMinimap() {
+  rect(0, 0, MAP_DIMENSIONS.x/MINIMAP_SCALE, MAP_DIMENSIONS.y/MINIMAP_SCALE);
   //display the walls in the minimap
   walls.forEach(element => {
     line(element.a.x/MINIMAP_SCALE, element.a.y/MINIMAP_SCALE, element.b.x/MINIMAP_SCALE, element.b.y/MINIMAP_SCALE);
@@ -64,6 +73,16 @@ function displayMinimap() {
   });
   
   player.display();
+}
+
+
+//     /
+//    /    calculate normal, and move the circle in the same angle as the normal
+//   / o   _____________
+//  /            x      | y
+// /                    \/
+function calculateNormal(x1, y1, x2, y2) {
+
 }
 
 function distance(v1, v2) {
@@ -104,9 +123,9 @@ function render3D() {
   for (let i = 0; i < player.rays.length-2; i++) {
     push();
     noStroke();
-    fill(200-(player.rays[i].size / pow(MAX_RAY_LENGTH,1/2)));
-    let h = map(MAX_RAY_LENGTH-player.rays[i].size, 0, MAX_RAY_LENGTH, 0, height, true);
-    rect(i * width/SUBDIVISIONS, height/2, width/SUBDIVISIONS + 1, h/2);
+    fill(map(MAX_RAY_LENGTH-player.rays[i].size, 0, MAX_RAY_LENGTH, 0, 255));
+    let h = map(MAX_RAY_LENGTH-player.rays[i].size, 0, MAX_RAY_LENGTH, 0, height);
+    rect(i * width/SUBDIVISIONS, height/2, width/SUBDIVISIONS + 1, h);
     pop();
   }
   rectMode(CORNER);
