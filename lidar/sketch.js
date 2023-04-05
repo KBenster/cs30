@@ -12,19 +12,35 @@ function setup() {
   triangles.push(createTriangle(createVector(0, 0, 0), //bottom left
                                 createVector(0, 100, 0), //bottom right
                                 createVector(50, 50, 0)));//top middle
-  ray = {a: createVector(20, 50, -100), b:createVector(50, 50, 100)};
+  ray = {a: createVector(20, 50, -250), b:createVector(50, 50, 250)};
+
   console.log(lineTriangleIntersect(ray, triangles[0]));
 }
 
 function draw() {
   background(220);
   orbitControl();
-  line(ray.a.x, ray.a.y, ray.a.z, ray.b.x, ray.b.y, ray.b.z);
-  beginShape();
+
+  push();
+  beginShape(LINES);
+  vertex(ray.a.x, ray.a.y, ray.a.z);
+  vertex(ray.b.x, ray.b.y, ray.b.z);
+  endShape();
+  pop();
+
+  push();
+  beginShape(TRIANGLES);
   vertex(triangles[0].a.x, triangles[0].a.y, triangles[0].a.z);
   vertex(triangles[0].b.x, triangles[0].b.y, triangles[0].b.z);
   vertex(triangles[0].c.x, triangles[0].c.y, triangles[0].c.z);
-  endShape(CLOSE);
+  endShape();
+  pop();
+}
+
+class Player {
+  constructor(pos, rot) { // rot is a 2d vector where (x, y) = (pitch, yaw)
+    
+  }
 }
 
 function createTriangle(p1, p2, p3) {
@@ -47,7 +63,7 @@ function signedVolume(a, b, c, d) {
   //we are subtracting a from b, c, d because the above formula assumes that a or v1 is zero.
   //SignedVolume(a,b,c,d) = (1.0/6.0)*dot(cross(b-a,c-a),d-a)
   
-    return (1.0/6.0)*(d.sub(a).dot((b.sub(a)).cross(c.sub(a))));
+  return 1.0/6.0 * vectorSub(d, a).dot(vectorSub(b, a).cross(vectorSub(c, a)));
 }
 
 function lineTriangleIntersect(lineSegment, triangle) {
@@ -57,10 +73,9 @@ function lineTriangleIntersect(lineSegment, triangle) {
 
   let q1 = lineSegment.a;
   let q2 = lineSegment.b;
-  //console.log(signedVolume(q1,p1,p2,p3) + " " + signedVolume(q1,p1,p2,p3));
-  if (signedVolume(q1,p1,p2,p3) !== signedVolume(q1,p1,p2,p3)) {
-    console.log("aaaaa");
-    if (signedVolume(q1,q2,p1,p2) === signedVolume(q1,q2,p2,p3) && signedVolume(q1,q2,p2,p3) === signedVolume(q1,q2,p3,p1)) {
+
+  if (signedVolume(q2,p1,p2,p3) === signedVolume(q1,p1,p2,p3) * -1) {
+    if ((signedVolume(q1,q2,p1,p2) >= 0 === signedVolume(q1,q2,p2,p3) >= 0) && signedVolume(q1,q2,p1,p2) >= 0 === signedVolume(q1,q2,p3,p1) >= 0) {
       return true;
     }
   }
@@ -68,3 +83,10 @@ function lineTriangleIntersect(lineSegment, triangle) {
   return false;
 }
 
+function vectorAdd(a, b) {
+  return createVector(a.x + b.x, a.y + b.y, a.z + b.z);
+}
+
+function vectorSub(a, b) {
+  return createVector(a.x - b.x, a.y - b.y, a.z - b.z);
+}
