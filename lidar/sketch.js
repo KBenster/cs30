@@ -4,7 +4,6 @@
 //
 // Extra for Experts:
 // - most of this
-// - https://stackoverflow.com/questions/42740765/intersection-between-line-and-triangle-in-3d
 let triangles;
 let ray;
 function setup() {
@@ -35,7 +34,20 @@ function createTriangle(p1, p2, p3) {
 }
 
 function signedVolume(a, b, c, d) {
-    return (1.0/6.0)*dot(cross(b-a,c-a),d-a);
+  //a, b, c, d are all vectors
+  //https://stackoverflow.com/questions/42740765/intersection-between-line-and-triangle-in-3d
+  //https://math.stackexchange.com/questions/2841269/how-to-find-the-volume-of-a-tetrahedron
+  //essentially, when a = 0
+  //a, b and c are given by a scalar triple product.
+  //Volume = (1/6) * |v1 ⋅ (v2 x v3)|
+  
+  //if it's a 3x3 matrix Δ whos ith column equals to vi, the above formula becomes
+  //volume = (1/6) * |det Δ|
+  
+  //we are subtracting a from b, c, d because the above formula assumes that a or v1 is zero.
+  //SignedVolume(a,b,c,d) = (1.0/6.0)*dot(cross(b-a,c-a),d-a)
+  
+    return (1.0/6.0)*(d.sub(a).dot((b.sub(a)).cross(c.sub(a))));
 }
 
 function lineTriangleIntersect(lineSegment, triangle) {
