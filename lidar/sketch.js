@@ -120,7 +120,7 @@ class Ray {
     endShape();
     pop();
     for (let i = 0; i < triangles.length; i++) {
-      let collision = lineTriangleIntersect({a:createVector(100, 100, 100), b:endPosition}, {a:triangles[i].a, b:triangles[i].b, c:triangles[i].c});
+      let collision = lineTriangleIntersect({a:this.pos, b:endPosition}, {a:triangles[i].c, b:triangles[i].b, c:triangles[i].a});
       if (collision !== false) {
         collisions.push(collision);
       }
