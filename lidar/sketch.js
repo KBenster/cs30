@@ -5,82 +5,71 @@
 // Extra for Experts:
 // - most of this
 let triangles;
-let ray;
 let player;
 
-let testRay;
-let testTriangle;
-
-const RENDER_DISTANCE = 300;
+const RENDER_DISTANCE = 500; // maximum ray distance
+const RENDER_QUALITY = 60; //number of rays cast; square this number to get the total number of rays
 const MODE = true; //true/false for webgl/camera view
 function setup() {
   if (MODE) {
     createCanvas(windowWidth, windowHeight, WEBGL);
   } else {
-    createCanvas(256, 256);
+    createCanvas(RENDER_QUALITY*8, RENDER_QUALITY*8);
   }
   triangles = [];
   triangles.push({a:createVector(0, 0, 0), //bottom left
-                                b:createVector(0, 500, 0), //bottom right
-                                c:createVector(500, 50, 0)});//top middle
-  player = new Player(createVector(100, 100, 100), createVector(-0.5, 0, 0).normalize());
+                                b:createVector(0, 100, 0), //bottom right
+                                c:createVector(50, 100, 0)});//top middle 
+  triangles.push({a:createVector(100, 100, 100), //bottom left
+                                b:createVector(0, 200, 0), //bottom right
+                                c:createVector(100, 00, 0)});//top middle
 
 
-  testRay = {a:createVector(0, 100, 0), 
-    b:createVector(0, 0, 0)};
-  testTriangle = {a:createVector(-10, 50, -10), b:createVector(10, 50, 10), c:createVector(-10, 50, 10)};
+  player = new Player(createVector(358, 100, -160), createVector(0.5639, 0, -0.8257).normalize());
 }
 
 function draw() {
+  output(frameRate());
   background(220);
-  orbitControl();
+  if(MODE){
+    orbitControl();
+  }
 
   displayAxis();
+  
   manageKeys(1/100);
   player.update();
-  //player.showRays();
+  player.showRays();
 
-  lineTriangleIntersect(testRay, testTriangle);
-
-  push();
-  beginShape(LINES);
-  vertex(testRay.a.x, testRay.a.y, testRay.a.z);
-  vertex(testRay.b.x, testRay.b.y, testRay.b.z);
-  endShape();
-  pop();
-
-  push();
-  beginShape(TRIANGLES);
-  vertex(testTriangle.a.x, testTriangle.a.y, testTriangle.a.z);
-  vertex(testTriangle.b.x, testTriangle.b.y, testTriangle.b.z);
-  vertex(testTriangle.c.x, testTriangle.c.y, testTriangle.c.z);
-  endShape();
-  pop();
-
-  push();
-  beginShape(TRIANGLES);
-  vertex(triangles[0].a.x, triangles[0].a.y, triangles[0].a.z);
-  vertex(triangles[0].b.x, triangles[0].b.y, triangles[0].b.z);
-  vertex(triangles[0].c.x, triangles[0].c.y, triangles[0].c.z);
-  endShape();
-  pop();
+  if(MODE){ // if we're in 3d viewing mode
+    triangles.forEach(triangle => { // draw the triangles
+      push();
+      beginShape(TRIANGLES);
+      vertex(triangle.a.x, triangle.a.y, triangle.a.z);
+      vertex(triangle.b.x, triangle.b.y, triangle.b.z);
+      vertex(triangle.c.x, triangle.c.y, triangle.c.z);
+      endShape();
+      pop();
+    });
+  }
 }
 
 class Player {
   constructor(pos, rot) {
     this.pos = pos;
     this.rot = rot;
-    this.update();
+    this.initializeRays(); // cast new rays
   }
 
-  update() {
+
+  initializeRays() {
     this.rays = [];
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < RENDER_QUALITY; i++) {
       this.rays.push([]);
-      let x = map(i, 0, 15, -1, 1);
-      for (let j = 0; j < 16; j++) {
-        let y = map(j, 0, 15, -1, 1);
-        let rayDirection = createVector(x, y, 3).normalize();
+      let x = map(i, 0, RENDER_QUALITY-1, -1, 1);
+      for (let j = 0; j < RENDER_QUALITY; j++) {
+        let y = map(j, 0, RENDER_QUALITY-1, -1, 1);
+        let rayDirection = createVector(x, y, 3).normalize(); // the fov will remain the same regardless of the render quality
         let angles = vectorToAngles(this.rot); // [azimuth, elevation]
         rayDirection = rotateAround(rayDirection, createVector(0, 1, 0), angles[0]); // azimuth
         //rayDirection = rotateAround(rayDirection, createVector(1, 0, 0), angles[1]); // elevation THE ISSUE IS IN HERE
@@ -88,10 +77,33 @@ class Player {
       }
     }
   }
-  showRays() {
+
+  update() {
     for (let i = 0; i < this.rays.length; i++) {
+      let x = map(i, 0, RENDER_QUALITY-1, -1, 1);
       for (let j = 0; j < this.rays[i].length; j++) {
-        this.rays[i][j].show();
+        let y = map(j, 0, RENDER_QUALITY-1, -1, 1);
+        let rayDirection = createVector(x, y, 3).normalize(); // the fov will remain the same regardless of the render quality
+        let angles = vectorToAngles(this.rot); // [azimuth, elevation]
+        rayDirection = rotateAround(rayDirection, createVector(0, 1, 0), angles[0]); // azimuth
+        //rayDirection = rotateAround(rayDirection, createVector(1, 0, 0), angles[1]); // elevation THE ISSUE IS IN HERE
+        this.rays[i][j].pos = this.pos;
+        this.rays[i][j].dir = rayDirection;
+        this.rays[i][j].collide();
+      }
+    }
+  }
+
+  showRays() { // iterate over every ray, draw the square representing what the ray sees
+    for (let i = this.rays.length-1; i > 0; i--) {
+      for (let j = this.rays.length-1; j > 0; j--) {
+        push();
+        noStroke();
+        fill(map(vectorDist(this.rays[i][j].pos, this.rays[i][j].end), 0, RENDER_DISTANCE, 0, 255));
+        square(i*8, j*8, 8);
+        pop();
+        //this.rays[i][j].show(); // draw the centermost ray
+        
       }
     }
   }
@@ -112,14 +124,8 @@ class Ray {
   collide() {
     let collisions = [];
     let endPosition = vectorAdd(this.pos, vectorMult(RENDER_DISTANCE, this.dir));
-    //output("Collide called on new ray at coordinate " + this.pos.array());
-    push();
-    beginShape(LINES);
-    vertex(this.pos.x, this.pos.y, this.pos.z);
-    vertex(endPosition.x, endPosition.y, endPosition.z);
-    endShape();
-    pop();
     for (let i = 0; i < triangles.length; i++) {
+      // this collision variable will either be a vector of the collision or false for no collision
       let collision = lineTriangleIntersect({a:this.pos, b:endPosition}, {a:triangles[i].c, b:triangles[i].b, c:triangles[i].a});
       if (collision !== false) {
         collisions.push(collision);
@@ -127,7 +133,7 @@ class Ray {
     }
 
     if (collisions.length !== 0) {
-      let closestCollision = collisions[0]; // we might get lucky
+      let closestCollision = collisions[0];
       collisions.forEach(coll => {
         if (vectorDist(coll, this.pos) < vectorDist(closestCollision, this.pos)) {
           closestCollision = coll;
@@ -137,14 +143,10 @@ class Ray {
     } else {
       this.end = endPosition;
     }
-    output("\n");
   }
   show() {
     push();
     beginShape(LINES);
-
-    // let secondPoint = vectorMult(RENDER_DISTANCE, this.dir);
-    // let endPosition = vectorAdd(this.pos, secondPoint);
     vertex(this.pos.x, this.pos.y, this.pos.z);
     vertex(this.end.x, this.end.y, this.end.z);
     endShape();
@@ -167,6 +169,8 @@ function createTriangle(p1, p2, p3) {
 }
 
 function manageKeys(speed) {
+
+  //rotations
   let angles = vectorToAngles(player.rot)
   if (keyIsDown(LEFT_ARROW)) {
     angles[0] += speed;
@@ -182,6 +186,25 @@ function manageKeys(speed) {
   }
   
   player.rot = vectorFromAngles(angles[1], angles[0]);
+
+
+  //positions
+  if (keyIsDown(87)) {
+    player.pos.x += sin(vectorToAngles(player.rot)[0]) * speed * 150;
+    player.pos.z += cos(vectorToAngles(player.rot)[0]) * speed * 150;
+  }
+  if (keyIsDown(65)) {
+    player.pos.x += cos(vectorToAngles(player.rot)[0]) * speed * 150;
+    player.pos.z -= sin(vectorToAngles(player.rot)[0]) * speed * 150;
+  }
+  if (keyIsDown(83)) {
+    player.pos.x -= sin(vectorToAngles(player.rot)[0]) * speed * 150;
+    player.pos.z -= cos(vectorToAngles(player.rot)[0]) * speed * 150;
+  }
+  if (keyIsDown(68)) {
+    player.pos.x -= cos(vectorToAngles(player.rot)[0]) * speed * 150;
+    player.pos.z += sin(vectorToAngles(player.rot)[0]) * speed * 150;
+  }
 }
 
 function signedVolume(a, b, c, d) {
@@ -202,26 +225,28 @@ function signedVolume(a, b, c, d) {
 }
 
 function lineTriangleIntersect(lineSegment, triangle) {
+  //checks the sign
+
   let p1 = triangle.a;
   let p2 = triangle.b;
   let p3 = triangle.c;
 
   let q1 = lineSegment.a;
   let q2 = lineSegment.b;
-
-  if (signedVolume(q2,p1,p2,p3) === signedVolume(q1,p1,p2,p3) * -1) {
+  
+  if (signedVolume(q2,p1,p2,p3) >= 0 === (signedVolume(q1,p1,p2,p3) * -1) >= 0) {
     if ((signedVolume(q1,q2,p1,p2) >= 0 === signedVolume(q1,q2,p2,p3) >= 0) && signedVolume(q1,q2,p1,p2) >= 0 === signedVolume(q1,q2,p3,p1) >= 0) {
 
       let N = vectorSub(p2, p1).cross(vectorSub(p3, p1));
       let t = -(vectorSub(q1, p1).dot(N))/(vectorSub(q2, q1).dot(N));
       let i = vectorAdd(q1, vectorMult(t, vectorSub(q2, q1)));
 
-      push();
-      noStroke();
-      translate(i.x, i.y, i.z);
-      fill(255, 0, 0);
-      sphere(2);
-      pop();
+      // push();
+      // noStroke();
+      // translate(i.x, i.y, i.z);
+      // fill(255, 0, 0);
+      // sphere(2);
+      // pop();
 
       return i;
     }
