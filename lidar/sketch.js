@@ -9,7 +9,7 @@ let triangles;
 let player;
 
 const RENDER_DISTANCE = 500; // maximum ray distance
-const RENDER_QUALITY = 150; //number of rays cast; square this number to get the total number of rays
+const RENDER_QUALITY = 30; //number of rays cast; square this number to get the total number of rays
 const MODE = true; //true/false for webgl/camera view
 function setup() {
   if (MODE) {
