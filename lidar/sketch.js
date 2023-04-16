@@ -3,12 +3,13 @@
 // 4/4/23
 //
 // Extra for Experts:
-// - most of this
+// - lots of the math
+// - object oriented programming
 let triangles;
 let player;
 
 const RENDER_DISTANCE = 500; // maximum ray distance
-const RENDER_QUALITY = 60; //number of rays cast; square this number to get the total number of rays
+const RENDER_QUALITY = 150; //number of rays cast; square this number to get the total number of rays
 const MODE = true; //true/false for webgl/camera view
 function setup() {
   if (MODE) {
@@ -99,10 +100,13 @@ class Player {
       for (let j = this.rays.length-1; j > 0; j--) {
         push();
         noStroke();
-        fill(map(vectorDist(this.rays[i][j].pos, this.rays[i][j].end), 0, RENDER_DISTANCE, 0, 255));
-        square(i*8, j*8, 8);
+        fill(map(p5.Vector.dist(this.rays[i][j].pos, this.rays[i][j].end), 0, RENDER_DISTANCE, 0, 255));
+        let scalingFactor = (500/RENDER_QUALITY);
+        square(i*scalingFactor, j*scalingFactor, scalingFactor);
         pop();
-        //this.rays[i][j].show(); // draw the centermost ray
+        if (i === round(RENDER_QUALITY/2) && j === round(RENDER_QUALITY/2)) {
+          this.rays[i][j].show();
+        }
         
       }
     }
@@ -123,10 +127,13 @@ class Ray {
   }
   collide() {
     let collisions = [];
-    let endPosition = vectorAdd(this.pos, vectorMult(RENDER_DISTANCE, this.dir));
+    let endPosition = p5.Vector.add(this.pos, p5.Vector.mult(this.dir, RENDER_DISTANCE));
     for (let i = 0; i < triangles.length; i++) {
       // this collision variable will either be a vector of the collision or false for no collision
-      let collision = lineTriangleIntersect({a:this.pos, b:endPosition}, {a:triangles[i].c, b:triangles[i].b, c:triangles[i].a});
+      //there are two options for collision detection algorithms
+      //lineTriangleIntersectSlow, which uses the volumes of tetrahedrons to calculate the intersection
+      //lineTriangleIntersectMollerTrumbore which uses a system of equations to solve the intersection
+      let collision = lineTriangleIntersectMollerTrumbore({a:this.pos, b:endPosition}, {a:triangles[i].c, b:triangles[i].b, c:triangles[i].a});
       if (collision !== false) {
         collisions.push(collision);
       }
@@ -135,7 +142,7 @@ class Ray {
     if (collisions.length !== 0) {
       let closestCollision = collisions[0];
       collisions.forEach(coll => {
-        if (vectorDist(coll, this.pos) < vectorDist(closestCollision, this.pos)) {
+        if (p5.Vector.dist(coll, this.pos) < p5.Vector.dist(closestCollision, this.pos)) {
           closestCollision = coll;
         }
       });
@@ -221,10 +228,61 @@ function signedVolume(a, b, c, d) {
   //we are subtracting a from b, c, d because the above formula assumes that a or v1 is zero.
   //SignedVolume(a,b,c,d) = (1.0/6.0)*dot(cross(b-a,c-a),d-a)
   
-  return 1.0/6.0 * vectorSub(d, a).dot(vectorSub(b, a).cross(vectorSub(c, a)));
+  return 1.0/6.0 * p5.Vector.sub(d, a).dot(p5.Vector.sub(b, a).cross(p5.Vector.sub(c, a)));
 }
 
-function lineTriangleIntersect(lineSegment, triangle) {
+function lineTriangleIntersectMollerTrumbore(lineSegment, triangle) {
+  let a = triangle.a;
+  let b = triangle.b;
+  let c = triangle.c;
+
+  let o = lineSegment.a;
+  let rayDir = p5.Vector.sub(lineSegment.b, lineSegment.a).normalize();
+
+  //these two are edge vectors of the triangle.
+  //the three possible vectors for a triangle are:
+  //E1 = B - A
+  //E2 = C - A
+  //E3 = C - B
+  let E1 = p5.Vector.sub(b, a);
+  let E2 = p5.Vector.sub(c, a);
+
+  //This variable represents the normal vector of the triangle
+  //pretty cool because we can use any two edge vectors to do this
+  //with a regular octagon for example, just take the cross product between the edge vectors of any two adjacent sides.
+  let N = p5.Vector.cross(E1, E2);
+  
+  //this is a scalar value, the determinant of a 3x3 matrix
+  //E1.x  E2.x  -rayDir.x
+  //E1.y  E2.y  -rayDir.y
+  //E1.z  E2.z  -rayDir.z
+  let det = -p5.Vector.dot(rayDir, N);
+
+
+  //if the determinant is zero, then dividing by it would product NaN or an infinite value.
+  //multiplying by the reciprocal is better?
+  let invdet = 1/det;
+
+  //the following is solving for u, v, and t
+  //t represents a point along the ray of arbitrary distance
+  //u and v are barycentric coordinates which represent the point that the line intersects with the triangle
+  let AO = p5.Vector.sub(o, a);
+  let DAO = p5.Vector.cross(AO, rayDir);
+  let u = p5.Vector.dot(E2, DAO) * invdet;
+  let v = -p5.Vector.dot(E1, DAO) * invdet;
+  let t = p5.Vector.dot(AO, N) * invdet;
+
+  let collisionDetected = (det >= 1e-6 && t >= 0.0 && u >= 0.0 && v >= 0.0 && (u + v) <= 1.0);
+  // collision location at R.Origin + t * R.Dir
+  if (collisionDetected) {
+    return o.copy().add(rayDir.copy().mult(t));
+  }
+
+  return collisionDetected;
+ 
+}
+
+function lineTriangleIntersectSlow(lineSegment, triangle) {
   //checks the sign
 
   let p1 = triangle.a;
@@ -237,9 +295,9 @@ function lineTriangleIntersect(lineSegment, triangle) {
   if (signedVolume(q2,p1,p2,p3) >= 0 === (signedVolume(q1,p1,p2,p3) * -1) >= 0) {
     if ((signedVolume(q1,q2,p1,p2) >= 0 === signedVolume(q1,q2,p2,p3) >= 0) && signedVolume(q1,q2,p1,p2) >= 0 === signedVolume(q1,q2,p3,p1) >= 0) {
 
-      let N = vectorSub(p2, p1).cross(vectorSub(p3, p1));
-      let t = -(vectorSub(q1, p1).dot(N))/(vectorSub(q2, q1).dot(N));
-      let i = vectorAdd(q1, vectorMult(t, vectorSub(q2, q1)));
+      let N = p5.Vector.sub(p2, p1).cross(p5.Vector.sub(p3, p1));
+      let t = -(p5.Vector.sub(q1, p1).dot(N))/(p5.Vector.sub(q2, q1).dot(N));
+      let i = p5.Vector.add(q1, p5.Vector.mult(t, p5.Vector.sub(q2, q1)));
 
       // push();
       // noStroke();
@@ -253,20 +311,6 @@ function lineTriangleIntersect(lineSegment, triangle) {
   }
 
   return false;
-}
-
-
-function vectorAdd(a, b) {
-  return createVector(a.x + b.x, a.y + b.y, a.z + b.z);
-}
-
-function vectorSub(a, b) {
-  return createVector(a.x - b.x, a.y - b.y, a.z - b.z);
-}
-
-function vectorMult(a, b) { // a would be a scalar hypothetically
-  let vect = b.copy();
-  return vect.mult(a);
 }
 
 //https://stackoverflow.com/questions/67458592/how-would-i-rotate-a-vector-in-3d-space-p5-js
@@ -329,7 +373,7 @@ function matrixMult(a, b) {
   let bNumCols = b[0].length;
 
   if (aNumCols !== bNumRows) {
-    console.log("matrixMult function: Cannot multiply matrices, dimensions do not match");
+    console.log("the dimensions of the matrices are not compatible");
     return null;
   }
 
@@ -349,6 +393,7 @@ function matrixMult(a, b) {
 }
 
 function displayAxis() {
+  //x
   push();
   beginShape(LINES);
   stroke(255, 0, 0);
@@ -357,6 +402,7 @@ function displayAxis() {
   endShape();
   pop();
 
+  //y
   push();
   beginShape(LINES);
   stroke(0, 255, 0);
@@ -365,6 +411,7 @@ function displayAxis() {
   endShape();
   pop();
 
+  //z
   push();
   beginShape(LINES);
   stroke(0, 0, 255);
@@ -375,7 +422,7 @@ function displayAxis() {
 }
 
 function output(a) {
-  if (frameCount % 100 === 0) {
+  if (frameCount % 10 === 0) {
     console.log(a);
   }
 }
@@ -395,10 +442,4 @@ function vectorToAngles(v) {
   let azimuth = atan2(v.z, v.x);
   let elevation = atan2(sqrt(v.x * v.x + v.z * v.z), v.y);
   return [azimuth, elevation]
-}
-
-function vectorDist(a, b) {
-  let dx = a.x - b.x;
-  let dy = a.y - b.y;
-  return sqrt(pow(dx, 2) + pow(dy, 2));
 }
