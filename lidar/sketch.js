@@ -8,9 +8,9 @@
 let triangles;
 let player;
 
-const RENDER_DISTANCE = 500; // maximum ray distance
-const RENDER_QUALITY = 30; //number of rays cast; square this number to get the total number of rays
-const MODE = true; //true/false for webgl/camera view
+const RENDER_DISTANCE = 1000; // maximum ray distance
+const RENDER_QUALITY = 1000; //number of rays cast; square this number to get the total number of rays
+const MODE = false; //true/false for webgl/camera view
 function setup() {
   if (MODE) {
     createCanvas(windowWidth, windowHeight, WEBGL);
@@ -23,7 +23,7 @@ function setup() {
                                 c:createVector(50, 100, 0)});//top middle 
   triangles.push({a:createVector(100, 100, 100), //bottom left
                                 b:createVector(0, 200, 0), //bottom right
-                                c:createVector(100, 00, 0)});//top middle
+                                c:createVector(100, 0, 0)});//top middle
 
 
   player = new Player(createVector(358, 100, -160), createVector(0.5639, 0, -0.8257).normalize());
@@ -38,7 +38,7 @@ function draw() {
 
   displayAxis();
   
-  manageKeys(1/100);
+  manageKeys(1/20);
   player.update();
   player.showRays();
 
@@ -104,7 +104,7 @@ class Player {
         let scalingFactor = (500/RENDER_QUALITY);
         square(i*scalingFactor, j*scalingFactor, scalingFactor);
         pop();
-        if (i % 5 === 0 && i % 5 === 0) {
+        if (i === "av") {
           this.rays[i][j].show();
         }
         
@@ -377,7 +377,7 @@ function matrixMult(a, b) {
     return null;
   }
 
-  m = [];
+  let m = [];
   for (let r = 0; r < aNumRows; r++) {
     m.push([]);
     for (let c = 0; c < bNumCols; c++) {
