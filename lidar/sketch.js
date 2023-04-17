@@ -104,7 +104,7 @@ class Player {
         let scalingFactor = (500/RENDER_QUALITY);
         square(i*scalingFactor, j*scalingFactor, scalingFactor);
         pop();
-        if (i === round(RENDER_QUALITY/2) && j === round(RENDER_QUALITY/2)) {
+        if (i % 5 === 0 && i % 5 === 0) {
           this.rays[i][j].show();
         }
         
