@@ -248,9 +248,13 @@ function lineTriangleIntersectMollerTrumbore(lineSegment, triangle) {
   let E2 = p5.Vector.sub(c, a);
 
   //This variable represents the normal vector of the triangle
+  //The cross product returns a vector linearly perpendicular two the two vectors given to it. 
+  //This creates an issue, because you're only getting one of the normals. 
+  //you get two normals, axb is pointing one way, bxa is pointing the other way
   //pretty cool because we can use any two edge vectors to do this
   //with a regular octagon for example, just take the cross product between the edge vectors of any two adjacent sides.
   let N = p5.Vector.cross(E1, E2);
+  
   
   //this is a scalar value, the determinant of a 3x3 matrix
   //E1.x  E2.x  -rayDir.x
