@@ -10,7 +10,7 @@ let player;
 
 const RENDER_DISTANCE = 1000; // maximum ray distance
 const RENDER_QUALITY = 30; //number of rays cast; square this number to get the total number of rays
-const MODE = false; //true/false for webgl/camera view
+const MODE = true; //true/false for webgl/camera view
 function setup() {
   if (MODE) {
     createCanvas(windowWidth, windowHeight, WEBGL);
@@ -104,7 +104,8 @@ class Player {
         let scalingFactor = (500/RENDER_QUALITY);
         square(i*scalingFactor, j*scalingFactor, scalingFactor);
         pop();
-        if (i === "av") {
+
+        if (i % 10 === 0 || j % 10 === 0) {
           this.rays[i][j].show();
         }
         
@@ -133,7 +134,7 @@ class Ray {
       //there are two options for collision detection algorithms
       //lineTriangleIntersectSlow, which uses the volumes of tetrahedrons to calculate the intersection
       //lineTriangleIntersectMollerTrumbore which uses a system of equations to solve the intersection
-      let collision = lineTriangleIntersectMollerTrumbore({a:this.pos, b:endPosition}, {a:triangles[i].c, b:triangles[i].b, c:triangles[i].a});
+      let collision = lineTriangleIntersectMollerTrumborev2({a:this.pos, b:endPosition}, {a:triangles[i].c, b:triangles[i].b, c:triangles[i].a});
       if (collision !== false) {
         collisions.push(collision);
       }
@@ -230,8 +231,8 @@ function signedVolume(a, b, c, d) {
   
   return 1.0/6.0 * p5.Vector.sub(d, a).dot(p5.Vector.sub(b, a).cross(p5.Vector.sub(c, a)));
 }
-
-function lineTriangleIntersectMollerTrumbore(lineSegment, triangle) {
+//v1, this only supports a single normal
+function lineTriangleIntersectMollerTrumborev1(lineSegment, triangle) {
   let a = triangle.a;
   let b = triangle.b;
   let c = triangle.c;
@@ -280,6 +281,67 @@ function lineTriangleIntersectMollerTrumbore(lineSegment, triangle) {
   // collision location at R.Origin + t * R.Dir
   if (collisionDetected) {
     return o.copy().add(rayDir.copy().mult(t));
+  }
+
+  return collisionDetected;
+ 
+}
+//this is supposed to support both normals of the triangle
+function lineTriangleIntersectMollerTrumborev2(lineSegment, triangle) {
+  let a = triangle.a;
+  let b = triangle.b;
+  let c = triangle.c;
+
+  let o = lineSegment.a;
+  let rayDir = p5.Vector.sub(lineSegment.b, lineSegment.a).normalize();
+
+  //these two are edge vectors of the triangle.
+  //the three possible vectors for a triangle are:
+  //E1 = B - A
+  //E2 = C - A
+  //E3 = C - B
+  let E1 = p5.Vector.sub(b, a);
+  let E2 = p5.Vector.sub(c, a);
+
+  //This variable represents the normal vector of the triangle
+  //The cross product returns a vector linearly perpendicular two the two vectors given to it. 
+  //This creates an issue, because you're only getting one of the normals. 
+  //you get two normals, axb is pointing one way, bxa is pointing the other way
+  //pretty cool because we can use any two edge vectors to do this
+  //with a regular octagon for example, just take the cross product between the edge vectors of any two adjacent sides.
+  let N1 = p5.Vector.cross(E1, E2);
+  let N2 = p5.Vector.cross(E2, E1);
+  
+  
+  //this is a scalar value, the determinant of a 3x3 matrix
+  //E1.x  E2.x  -rayDir.x
+  //E1.y  E2.y  -rayDir.y
+  //E1.z  E2.z  -rayDir.z
+  let det1 = -p5.Vector.dot(rayDir, N1);
+  let det2 = -p5.Vector.dot(rayDir, N2);
+
+
+  //if the determinant is zero, then dividing by it would product NaN or an infinite value.
+  //multiplying by the reciprocal is better?
+  let invdet1 = 1/det1;
+  let invdet2 = 1/det2;
+
+  //the following is solving for u, v, and t
+  //t represents a point along the ray of arbitrary distance
+  //u and v are barycentric coordinates which represent the point that the line intersects with the triangle
+  let AO = p5.Vector.sub(o, a);
+  let DAO = p5.Vector.cross(AO, rayDir);
+  let u1 = p5.Vector.dot(E2, DAO) * invdet1;
+  let u2 = p5.Vector.dot(E2, DAO) * invdet2;
+  let v1 = -p5.Vector.dot(E1, DAO) * invdet1;
+  let v2 = -p5.Vector.dot(E1, DAO) * invdet2;
+  let t1 = p5.Vector.dot(AO, N1) * invdet1;
+  let t2 = p5.Vector.dot(AO, N2) * invdet2;
+
+  let collisionDetected = (det1 >= 1e-6 || det2 >= 1e-6) && (t1 >= 0.0 || t2 >= 0.0) && (u1 >= 0.0 || u2 >= 0.0) && (v1 >= 0.0 || v2 >= 0.0) && ((u1 + v1) <= 1.0 || (u2 + v2) <= 1.0);
+  // collision location at R.Origin + t * R.Dir
+  if (collisionDetected) {
+    return o.copy().add(rayDir.copy().mult(t1));
   }
 
   return collisionDetected;
@@ -445,5 +507,5 @@ function vectorFromAngles(elevation, phi) {
 function vectorToAngles(v) {
   let azimuth = atan2(v.z, v.x);
   let elevation = atan2(sqrt(v.x * v.x + v.z * v.z), v.y);
-  return [azimuth, elevation]
+  return [azimuth, elevation];
 }
