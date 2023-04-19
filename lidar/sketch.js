@@ -3,34 +3,27 @@
 // 4/4/23
 //
 // Extra for Experts:
-// - lots of the math
-// - object oriented programming
-let triangles;
+let models;
 let player;
 
-const RENDER_DISTANCE = 1000; // maximum ray distance
-const RENDER_QUALITY = 30; //number of rays cast; square this number to get the total number of rays
+const RENDER_DISTANCE = 1500; // maximum ray distance
+const RENDER_QUALITY = 100; //number of rays cast; square this number to get the total number of rays
 const MODE = true; //true/false for webgl/camera view
+
+
 function setup() {
   if (MODE) {
     createCanvas(windowWidth, windowHeight, WEBGL);
   } else {
     createCanvas(RENDER_QUALITY*8, RENDER_QUALITY*8);
   }
-  triangles = [];
-  triangles.push({a:createVector(0, 0, 0), //bottom left
-                                b:createVector(0, 100, 0), //bottom right
-                                c:createVector(50, 100, 0)});//top middle 
-  triangles.push({a:createVector(100, 100, 100), //bottom left
-                                b:createVector(0, 200, 0), //bottom right
-                                c:createVector(100, 0, 0)});//top middle
 
-
-  player = new Player(createVector(358, 100, -160), createVector(0.5639, 0, -0.8257).normalize());
+  models = [];
+  loadStrings("assets/cattest2.obj", loadTriangles);
+  player = new Player(createVector(358, 200, -160), createVector(0.5639, 0, -0.8257).normalize());
 }
 
 function draw() {
-  output(frameRate());
   background(220);
   if(MODE){
     orbitControl();
@@ -41,16 +34,22 @@ function draw() {
   manageKeys(1/20);
   player.update();
   player.showRays();
+  drawModels();
+}
 
-  if(MODE){ // if we're in 3d viewing mode
-    triangles.forEach(triangle => { // draw the triangles
-      push();
-      beginShape(TRIANGLES);
-      vertex(triangle.a.x, triangle.a.y, triangle.a.z);
-      vertex(triangle.b.x, triangle.b.y, triangle.b.z);
-      vertex(triangle.c.x, triangle.c.y, triangle.c.z);
-      endShape();
-      pop();
+function drawModels() {
+  if (MODE) {
+    models.forEach(model => {
+      model[1].forEach(triangle => {
+        //[vertexArray, trianglesArray]
+        push();
+        beginShape(TRIANGLES);
+        vertex(triangle.a.x, triangle.a.y, triangle.a.z);
+        vertex(triangle.b.x, triangle.b.y, triangle.b.z);
+        vertex(triangle.c.x, triangle.c.y, triangle.c.z);
+        endShape();
+        pop();
+      });
     });
   }
 }
@@ -105,9 +104,7 @@ class Player {
         square(i*scalingFactor, j*scalingFactor, scalingFactor);
         pop();
 
-        if (i % 10 === 0 || j % 10 === 0) {
-          this.rays[i][j].show();
-        }
+        //this.rays[i][j].show();
         
       }
     }
@@ -129,16 +126,18 @@ class Ray {
   collide() {
     let collisions = [];
     let endPosition = p5.Vector.add(this.pos, p5.Vector.mult(this.dir, RENDER_DISTANCE));
-    for (let i = 0; i < triangles.length; i++) {
       // this collision variable will either be a vector of the collision or false for no collision
       //there are two options for collision detection algorithms
       //lineTriangleIntersectSlow, which uses the volumes of tetrahedrons to calculate the intersection
       //lineTriangleIntersectMollerTrumbore which uses a system of equations to solve the intersection
-      let collision = lineTriangleIntersectMollerTrumborev2({a:this.pos, b:endPosition}, {a:triangles[i].c, b:triangles[i].b, c:triangles[i].a});
-      if (collision !== false) {
-        collisions.push(collision);
-      }
-    }
+    models.forEach(model => {
+      model[1].forEach(triangle => {
+        let collision = lineTriangleIntersectMollerTrumbore({a:this.pos, b:endPosition}, {a:triangle.a, b:triangle.b, c:triangle.c});
+        if (collision !== false) {
+          collisions.push(collision);
+        }
+      });
+    });
 
     if (collisions.length !== 0) {
       let closestCollision = collisions[0];
@@ -174,6 +173,35 @@ function createTriangle(p1, p2, p3) {
   return {a:p1,
           b:p2,
           c:p3};
+}
+
+function loadTriangles(arr) {
+  //the format for the vertices are
+  // [
+  //   "v x y z",
+  //   "v x y z",
+  //   ...
+  //   "f i j k",
+  //   "f i j k",
+  //   ... 
+  // ]
+  let vertexArray = [];
+  let trianglesArray = [];
+  arr.forEach(element => {
+    let e = element.split(" ");
+    if (e[0] === "v") {
+      vertexArray.push(createVector(Number(e[1])-500,  // x
+                                    Number(e[2])+200,  // y
+                                    Number(e[3])+600));// z
+    }
+    if (e[0] === "f") {
+      trianglesArray.push(createTriangle(vertexArray[e[1]-1],  //a
+                                         vertexArray[e[2]-1],  //b
+                                         vertexArray[e[3]-1]));//c
+    }
+  });
+
+  models.push([vertexArray, trianglesArray]);
 }
 
 function manageKeys(speed) {
@@ -232,7 +260,7 @@ function signedVolume(a, b, c, d) {
   return 1.0/6.0 * p5.Vector.sub(d, a).dot(p5.Vector.sub(b, a).cross(p5.Vector.sub(c, a)));
 }
 //v1, this only supports a single normal
-function lineTriangleIntersectMollerTrumborev1(lineSegment, triangle) {
+function lineTriangleIntersectMollerTrumbore(lineSegment, triangle) {
   let a = triangle.a;
   let b = triangle.b;
   let c = triangle.c;
@@ -281,67 +309,6 @@ function lineTriangleIntersectMollerTrumborev1(lineSegment, triangle) {
   // collision location at R.Origin + t * R.Dir
   if (collisionDetected) {
     return o.copy().add(rayDir.copy().mult(t));
-  }
-
-  return collisionDetected;
- 
-}
-//this is supposed to support both normals of the triangle
-function lineTriangleIntersectMollerTrumborev2(lineSegment, triangle) {
-  let a = triangle.a;
-  let b = triangle.b;
-  let c = triangle.c;
-
-  let o = lineSegment.a;
-  let rayDir = p5.Vector.sub(lineSegment.b, lineSegment.a).normalize();
-
-  //these two are edge vectors of the triangle.
-  //the three possible vectors for a triangle are:
-  //E1 = B - A
-  //E2 = C - A
-  //E3 = C - B
-  let E1 = p5.Vector.sub(b, a);
-  let E2 = p5.Vector.sub(c, a);
-
-  //This variable represents the normal vector of the triangle
-  //The cross product returns a vector linearly perpendicular two the two vectors given to it. 
-  //This creates an issue, because you're only getting one of the normals. 
-  //you get two normals, axb is pointing one way, bxa is pointing the other way
-  //pretty cool because we can use any two edge vectors to do this
-  //with a regular octagon for example, just take the cross product between the edge vectors of any two adjacent sides.
-  let N1 = p5.Vector.cross(E1, E2);
-  let N2 = p5.Vector.cross(E2, E1);
-  
-  
-  //this is a scalar value, the determinant of a 3x3 matrix
-  //E1.x  E2.x  -rayDir.x
-  //E1.y  E2.y  -rayDir.y
-  //E1.z  E2.z  -rayDir.z
-  let det1 = -p5.Vector.dot(rayDir, N1);
-  let det2 = -p5.Vector.dot(rayDir, N2);
-
-
-  //if the determinant is zero, then dividing by it would product NaN or an infinite value.
-  //multiplying by the reciprocal is better?
-  let invdet1 = 1/det1;
-  let invdet2 = 1/det2;
-
-  //the following is solving for u, v, and t
-  //t represents a point along the ray of arbitrary distance
-  //u and v are barycentric coordinates which represent the point that the line intersects with the triangle
-  let AO = p5.Vector.sub(o, a);
-  let DAO = p5.Vector.cross(AO, rayDir);
-  let u1 = p5.Vector.dot(E2, DAO) * invdet1;
-  let u2 = p5.Vector.dot(E2, DAO) * invdet2;
-  let v1 = -p5.Vector.dot(E1, DAO) * invdet1;
-  let v2 = -p5.Vector.dot(E1, DAO) * invdet2;
-  let t1 = p5.Vector.dot(AO, N1) * invdet1;
-  let t2 = p5.Vector.dot(AO, N2) * invdet2;
-
-  let collisionDetected = (det1 >= 1e-6 || det2 >= 1e-6) && (t1 >= 0.0 || t2 >= 0.0) && (u1 >= 0.0 || u2 >= 0.0) && (v1 >= 0.0 || v2 >= 0.0) && ((u1 + v1) <= 1.0 || (u2 + v2) <= 1.0);
-  // collision location at R.Origin + t * R.Dir
-  if (collisionDetected) {
-    return o.copy().add(rayDir.copy().mult(t1));
   }
 
   return collisionDetected;
